@@ -38,7 +38,7 @@ inline void registerCustomObjects() {
         UNIQ_ID("test-trigger"),
         "framename.png"_spr,
 
-        [](EffectGameObject* trigger, GJBaseGameLayer* game, int p1, gd::vector<int> const* p2)
+        [](EffectGameObject* trigger, GJBaseGameLayer* game, int p1, std::vector<int> const* p2)
         {
             log::info("trigger callback!");
         },
@@ -57,7 +57,7 @@ inline void registerCustomObjects() {
             UNIQ_ID("test-trigger2"),
             "frame_name.png"_spr
         )->triggerObject(
-            [](EffectGameObject* trigger, GJBaseGameLayer* game, int p1, gd::vector<int> const* p2) {
+            [](EffectGameObject* trigger, GJBaseGameLayer* game, int p1, std::vector<int> const* p2) {
                 log::info("trigger2 callback!");
             }
         )->customSetup(
@@ -68,7 +68,7 @@ inline void registerCustomObjects() {
                 return str;
             }
         )->objectFromVector(
-            [](GameObject* object, gd::vector<gd::string>& p0, gd::vector<void*>&, void*, bool) {
+            [](GameObject* object, std::vector<std::string>& p0, std::vector<void*>&, void*, bool) {
                 // do something with object by p0
                 return object;
             }
@@ -147,11 +147,11 @@ namespace GameObjectsFactory {
         std::function<void(GameObject*)> m_resetObject = nullptr;
         std::function<void(EnhancedGameObject*, PlayerObject*)> m_activatedByPlayer = nullptr;
         std::function<void(EffectGameObject*, float)> m_triggerActivated = nullptr;
-        std::function<void(EffectGameObject*, GJBaseGameLayer*, int, gd::vector<int> const*)> m_triggerObject = nullptr;
+        std::function<void(EffectGameObject*, GJBaseGameLayer*, int, std::vector<int> const*)> m_triggerObject = nullptr;
         std::function<void(EditTriggersPopup*, EffectGameObject*, cocos2d::CCArray*)> m_editPopupSetup = nullptr;
-        std::function<std::string(std::string, GameObject*, GJBaseGameLayer*)> m_saveString = nullptr;
-        std::function<GameObject* (GameObject*, gd::vector<gd::string>&, gd::vector<void*>&, GJBaseGameLayer*, bool)> m_objectFromVector = nullptr;
-        std::function<void(GJBaseGameLayer*, GameObject*, double, gd::vector<int> const&)> m_spawnObject = nullptr;
+        std::function<gd::string(gd::string, GameObject*, GJBaseGameLayer*)> m_saveString = nullptr;
+        std::function<GameObject*(GameObject*, std::vector<gd::string>&, std::vector<void*>&, GJBaseGameLayer*, bool)> m_objectFromVector = nullptr;
+        std::function<void(GJBaseGameLayer*, GameObject*, double, std::vector<int> const&)> m_spawnObject = nullptr;
         std::function<bool(EditorUI*, GameObject*)> m_onEditObject = nullptr;
         std::function<bool(EditorUI*, GameObject*)> m_onEditObject2 = nullptr;
         std::function<bool(EditorUI*, GameObject*)> m_onEditObjectSpecial = nullptr;
@@ -166,31 +166,37 @@ namespace GameObjectsFactory {
 
         CREATE_FUNC(GameObjectConfig);
 
-#define ___582923_param_set_func_GameObjectsFactory(func, mem) \
-auto func(auto par = ((GameObjectConfig*)nullptr)->mem) { mem = par; return this; }
+        GameObjectConfig* objID(int v)         { m_objectID          = v; return this; }
+        GameObjectConfig* refID(int v)         { m_refObjectID       = v; return this; }
+        GameObjectConfig* frame(std::string v) { m_spriteFrame       = std::move(v); return this; }
+        GameObjectConfig* tab(int v)           { m_createTabBar      = v; return this; }
+        GameObjectConfig* insertIndex(int v)   { m_tabBarInsertIndex = v; return this; }
+        GameObjectConfig* btnBG(int v)         { m_createBtnBg       = v; return this; }
 
-        ___582923_param_set_func_GameObjectsFactory(objID, m_objectID);                 // Your custom object ID
-        ___582923_param_set_func_GameObjectsFactory(refID, m_refObjectID);              // Reference object to inherit from
-        ___582923_param_set_func_GameObjectsFactory(frame, m_spriteFrame);              // Sprite frame name (empty = keep from ref)
-        ___582923_param_set_func_GameObjectsFactory(tab, m_createTabBar);               // Create buttons bar
-        ___582923_param_set_func_GameObjectsFactory(insertIndex, m_tabBarInsertIndex);  // Tab bar insert place (-1 = add at end)
-        ___582923_param_set_func_GameObjectsFactory(btnBG, m_createBtnBg);              // BG for create button of this object
-
-#define ___582923_callback_set_func_GameObjectsFactory(func, def, mem) \
-auto func(auto par = def) { mem = par; return this; }
-
-        ___582923_callback_set_func_GameObjectsFactory(customSetup, [](void*) {}, m_customSetup);
-        ___582923_callback_set_func_GameObjectsFactory(resetObject, [](void*) {}, m_resetObject);
-        ___582923_callback_set_func_GameObjectsFactory(activatedByPlayer, [](void*, void*) {}, m_activatedByPlayer);
-        ___582923_callback_set_func_GameObjectsFactory(triggerActivated, [](void*, float) {}, m_triggerActivated);
-        ___582923_callback_set_func_GameObjectsFactory(triggerObject, [](void*, void*, int, gd::vector<int> const*) {}, m_triggerObject);
-        ___582923_callback_set_func_GameObjectsFactory(editPopupSetup, [](void*, void*, void*) {}, m_editPopupSetup);
-        ___582923_callback_set_func_GameObjectsFactory(saveString, [](std::string s, void*, void*) { return s; }, m_saveString);
-        ___582923_callback_set_func_GameObjectsFactory(objectFromVector, [](GameObject* a, gd::vector<gd::string>&, gd::vector<void*>&, void*, bool) { return a; }, m_objectFromVector);
-        ___582923_callback_set_func_GameObjectsFactory(spawnObject, [](void*, void*, double, gd::vector<int> const&) {}, m_spawnObject);
-        ___582923_callback_set_func_GameObjectsFactory(onEditObject, [](void*, void*) { return false; }, m_onEditObject);
-        ___582923_callback_set_func_GameObjectsFactory(onEditObject2, [](void*, void*) { return false; }, m_onEditObject2);
-        ___582923_callback_set_func_GameObjectsFactory(onEditObjectSpecial, [](void*, void*) { return false; }, m_onEditObjectSpecial);
+        GameObjectConfig* customSetup(std::function<void(GameObject*)> f)
+            { m_customSetup = std::move(f); return this; }
+        GameObjectConfig* resetObject(std::function<void(GameObject*)> f)
+            { m_resetObject = std::move(f); return this; }
+        GameObjectConfig* activatedByPlayer(std::function<void(EnhancedGameObject*, PlayerObject*)> f)
+            { m_activatedByPlayer = std::move(f); return this; }
+        GameObjectConfig* triggerActivated(std::function<void(EffectGameObject*, float)> f)
+            { m_triggerActivated = std::move(f); return this; }
+        GameObjectConfig* triggerObject(std::function<void(EffectGameObject*, GJBaseGameLayer*, int, std::vector<int> const*)> f)
+            { m_triggerObject = std::move(f); return this; }
+        GameObjectConfig* editPopupSetup(std::function<void(EditTriggersPopup*, EffectGameObject*, cocos2d::CCArray*)> f)
+            { m_editPopupSetup = std::move(f); return this; }
+        GameObjectConfig* saveString(std::function<gd::string(gd::string, GameObject*, GJBaseGameLayer*)> f)
+            { m_saveString = std::move(f); return this; }
+        GameObjectConfig* objectFromVector(std::function<GameObject*(GameObject*, std::vector<gd::string>&, std::vector<void*>&, GJBaseGameLayer*, bool)> f)
+            { m_objectFromVector = std::move(f); return this; }
+        GameObjectConfig* spawnObject(std::function<void(GJBaseGameLayer*, GameObject*, double, std::vector<int> const&)> f)
+            { m_spawnObject = std::move(f); return this; }
+        GameObjectConfig* onEditObject(std::function<bool(EditorUI*, GameObject*)> f)
+            { m_onEditObject = std::move(f); return this; }
+        GameObjectConfig* onEditObject2(std::function<bool(EditorUI*, GameObject*)> f)
+            { m_onEditObject2 = std::move(f); return this; }
+        GameObjectConfig* onEditObjectSpecial(std::function<bool(EditorUI*, GameObject*)> f)
+            { m_onEditObjectSpecial = std::move(f); return this; }
 
         void registerMe();
     };
@@ -210,11 +216,11 @@ auto func(auto par = def) { mem = par; return this; }
         }
 
         GameObjectConfig* getObject(int objectID) {
-            return static_cast<GameObjectConfig*>(getChildByTag(objectID));
+            return geode::cast::typeinfo_cast<GameObjectConfig*>(getChildByTag(objectID));
         }
 
         bool hasObject(int objectID) {
-            return geode::cast::typeinfo_cast<GameObjectConfig*>(getChildByTag(objectID)) != nullptr;
+            return getObject(objectID) != nullptr;
         }
     };
 
@@ -254,7 +260,6 @@ auto func(auto par = def) { mem = par; return this; }
             factory = Manager::create();
             factory->setID("object-factory-manager");
             gamePresistNode->addChild(factory);
-            //geode::SceneManager::get()->keepAcrossScenes(gamePresistNode);
         }
 
         return factory;
@@ -274,6 +279,7 @@ auto func(auto par = def) { mem = par; return this; }
      * @param config - Configuration object with callbacks and properties
      */
     inline void registerGameObject(GameObjectConfig* config) {
+        if (!config) return;
         getRegistry()->registerObject(config->m_objectID, config);
     }
     inline void GameObjectConfig::registerMe() { GameObjectsFactory::registerGameObject(this); }
@@ -358,9 +364,10 @@ auto func(auto par = def) { mem = par; return this; }
             obj->setType(GameObjectType::Decoration);
             obj->m_isDecoration = true;
 
-            if (obj->m_colorSprite) obj->m_colorSprite->initWithSpriteFrameName(
-                spriteFrameDetail.c_str()
-            );
+            if (!spriteFrameDetail.empty())
+                if (obj->m_colorSprite) obj->m_colorSprite->initWithSpriteFrameName(
+                    spriteFrameDetail.c_str()
+                );
 
             if (setupCallback) setupCallback(obj);
             };
@@ -382,7 +389,7 @@ auto func(auto par = def) { mem = par; return this; }
     inline GameObjectConfig* createTriggerConfig(
         int objectID,
         const std::string& spriteFrame = "edit_eEventLinkBtn_001.png",
-        std::function<void(EffectGameObject*, GJBaseGameLayer*, int, gd::vector<int> const*)> triggerCallback = nullptr,
+        std::function<void(EffectGameObject*, GJBaseGameLayer*, int, std::vector<int> const*)> triggerCallback = nullptr,
         std::function<void(EditTriggersPopup*, EffectGameObject*, cocos2d::CCArray*)> editCallback = nullptr
     ) {
         auto config = createObjectConfig(objectID, spriteFrame);
@@ -415,7 +422,6 @@ auto func(auto par = def) { mem = par; return this; }
         int refObjectID = 1594
     ) {
         auto cllbk = [=](GameObject* obj) mutable {
-            //spriteFrameDetail
             if (spriteFrameDetail.size()) if (auto a = obj->m_colorSprite) a->initWithSpriteFrameName(
                 spriteFrameDetail.c_str()
             );
