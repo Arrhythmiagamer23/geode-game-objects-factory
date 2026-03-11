@@ -150,8 +150,8 @@ namespace GameObjectsFactory {
         std::function<void(EffectGameObject*, GJBaseGameLayer*, int, std::vector<int> const*)> m_triggerObject = nullptr;
         std::function<void(EditTriggersPopup*, EffectGameObject*, cocos2d::CCArray*)> m_editPopupSetup = nullptr;
         std::function<gd::string(gd::string, GameObject*, GJBaseGameLayer*)> m_saveString = nullptr;
-        std::function<GameObject*(GameObject*, std::vector<gd::string>&, std::vector<void*>&, GJBaseGameLayer*, bool)> m_objectFromVector = nullptr;
-        std::function<void(GJBaseGameLayer*, GameObject*, double, std::vector<int> const&)> m_spawnObject = nullptr;
+        std::function<GameObject*(GameObject*, gd::vector<gd::string>&, gd::vector<void*>&, GJBaseGameLayer*, bool)> m_objectFromVector = nullptr;
+        std::function<void(GJBaseGameLayer*, GameObject*, double, gd::vector<int> const&)> m_spawnObject = nullptr;
         std::function<bool(EditorUI*, GameObject*)> m_onEditObject = nullptr;
         std::function<bool(EditorUI*, GameObject*)> m_onEditObject2 = nullptr;
         std::function<bool(EditorUI*, GameObject*)> m_onEditObjectSpecial = nullptr;
@@ -181,13 +181,13 @@ namespace GameObjectsFactory {
             { m_activatedByPlayer = std::move(f); return this; }
         GameObjectConfig* triggerActivated(std::function<void(EffectGameObject*, float)> f)
             { m_triggerActivated = std::move(f); return this; }
-        GameObjectConfig* triggerObject(std::function<void(EffectGameObject*, GJBaseGameLayer*, int, std::vector<int> const*)> f)
+        GameObjectConfig* triggerObject(std::function<void(EffectGameObject*, GJBaseGameLayer*, int, gd::vector<int> const*)> f)
             { m_triggerObject = std::move(f); return this; }
         GameObjectConfig* editPopupSetup(std::function<void(EditTriggersPopup*, EffectGameObject*, cocos2d::CCArray*)> f)
             { m_editPopupSetup = std::move(f); return this; }
         GameObjectConfig* saveString(std::function<gd::string(gd::string, GameObject*, GJBaseGameLayer*)> f)
             { m_saveString = std::move(f); return this; }
-        GameObjectConfig* objectFromVector(std::function<GameObject*(GameObject*, std::vector<gd::string>&, std::vector<void*>&, GJBaseGameLayer*, bool)> f)
+        GameObjectConfig* objectFromVector(std::function<GameObject*(GameObject*, gd::vector<gd::string>&, gd::vector<void*>&, GJBaseGameLayer*, bool)> f)
             { m_objectFromVector = std::move(f); return this; }
         GameObjectConfig* spawnObject(std::function<void(GJBaseGameLayer*, GameObject*, double, std::vector<int> const&)> f)
             { m_spawnObject = std::move(f); return this; }
