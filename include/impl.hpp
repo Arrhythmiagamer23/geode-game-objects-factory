@@ -1,4 +1,3 @@
-
 #include <Geode/Geode.hpp>
 #include <Geode/ui/GeodeUI.hpp>
 using namespace geode::prelude;
@@ -6,7 +5,7 @@ using namespace geode::prelude;
 #include <regex>
 #include <functional>
 
-static inline bool ALREADY_HAVE_GOF_IMPL;
+static inline bool ALREADY_HAVE_GOF_IMPL = false;
 
 #define THIS_CONF auto config = typeinfo_cast<GameObjectsFactory::GameObjectConfig*>(this ? getUserObject("config"_spr) : nullptr)
 #define TRY_GET_CONF(p) auto config = typeinfo_cast<GameObjectsFactory::GameObjectConfig*>(p ? p->getUserObject("config"_spr) : nullptr)
@@ -17,22 +16,23 @@ class $modify(MenuLayerObjectFactoryExt, MenuLayer) {
         if (ALREADY_HAVE_GOF_IMPL) return MenuLayer::init();
 
         for (auto searchPath : CCFileUtils::sharedFileUtils()->getSearchPaths()) {
-            auto file = std::string(searchPath.c_str()) + "register-game-objects.json";
-            if (!CCFileUtils::sharedFileUtils()->isFileExist(file)) continue;
-            auto parse = file::readJson(file).unwrapOrDefault();
-            for (auto v : parse) { // so silent
+            auto file = std::string(searchPath) + "register-game-objects.json";
+            if (!CCFileUtils::sharedFileUtils()->isFileExist(file.c_str())) continue;
+            auto parseRes = file::readJson(file);
+            if (!parseRes) continue;
+            for (auto v : parseRes.unwrap()) { // so silent
                 auto c = GameObjectsFactory::GameObjectConfig::create();
 
                 c->m_objectID = UNIQ_ID(v.dump(0).c_str());
 
-                if (v.contains("objID")) c->objID(v["objID"].asInt().unwrapOr(c->m_objectID));
-                if (v.contains("refID")) c->objID(v["refID"].asInt().unwrapOr(c->m_refObjectID));
-                if (v.contains("frame")) c->frame(v["frame"].asString().unwrapOr(c->m_spriteFrame));
+                if (v.contains("objID")) c->objID(v["objID"].template as<int>().unwrapOr(c->m_objectID));
+                if (v.contains("refID")) c->refID(v["refID"].template as<int>().unwrapOr(c->m_refObjectID));
+                if (v.contains("frame")) c->frame(v["frame"].template as<std::string>().unwrapOr(c->m_spriteFrame));
 
                 if (v.contains("preset")) {
-                    auto preset = v["preset"].asString().unwrapOr("");
+                    auto preset = v["preset"].template as<std::string>().unwrapOr("");
                     if (preset == "deco") {
-                        auto detail = v["detail"].asString().unwrapOr("");
+                        auto detail = v.contains("detail") ? v["detail"].template as<std::string>().unwrapOr("") : std::string{};
                         c = detail.size() ? GameObjectsFactory::createDecorationObjectConfig(
                             c->m_objectID, c->m_spriteFrame, detail
                         ) : GameObjectsFactory::createDecorationObjectConfig(
@@ -45,13 +45,13 @@ class $modify(MenuLayerObjectFactoryExt, MenuLayer) {
                         c->m_objectID, c->m_spriteFrame);
                 }
 
-                if (v.contains("tab")) c->tab(v["tab"].asInt().unwrapOr(c->m_createTabBar));
-                if (v.contains("insertIndex")) c->insertIndex(v["insertIndex"].asInt().unwrapOr(c->m_tabBarInsertIndex));
-                if (v.contains("btnBG")) c->btnBG(v["btnBG"].asInt().unwrapOr(c->m_createBtnBg));
+                if (v.contains("tab")) c->tab(v["tab"].template as<int>().unwrapOr(c->m_createTabBar));
+                if (v.contains("insertIndex")) c->insertIndex(v["insertIndex"].template as<int>().unwrapOr(c->m_tabBarInsertIndex));
+                if (v.contains("btnBG")) c->btnBG(v["btnBG"].template as<int>().unwrapOr(c->m_createBtnBg));
                 c->registerMe();
                 //meant to be like "unity/GJ_GameSheet.plist" for custom frames via "Sprite Frames Unity" mod
                 if (v.contains("spritesheet")) CCSpriteFrameCache::get()->addSpriteFramesWithFile(
-                    v["spritesheet"].asString().unwrapOr("").c_str()
+                    v["spritesheet"].template as<std::string>().unwrapOr("").c_str()
                 );
             }
         }
@@ -85,6 +85,7 @@ inline static auto exchangeCustomObjectIDs(
     // Replace ID of objects in CCArray
     if (objects) {
         for (auto object : CCArrayExt<GameObject*>(objects)) {
+            if (!object) continue;
             if (auto c = reg->getObject(object->m_objectID)) {
                 object->m_objectID = c->m_refObjectID;
                 replacements[object] = c;
@@ -105,7 +106,7 @@ inline static auto exchangeCustomObjectIDs(
 
 #include <Geode/modify/GJBaseGameLayer.hpp>
 class $modify(GJBaseGameLayerFactoryExt, GJBaseGameLayer) {
-    void spawnObject(GameObject * object, double delay, gd::vector<int> const& remapKeys) {
+    void spawnObject(GameObject * object, double delay, std::vector<int> const& remapKeys) {
         if (ALREADY_HAVE_GOF_IMPL) return GJBaseGameLayer::spawnObject(object, delay, remapKeys);
 
         auto changedObjects = exchangeCustomObjectIDs(object);
@@ -150,7 +151,7 @@ class $modify(EffectGameObjectFactoryExt, EffectGameObject) {
         // Call custom activation if available
         if (THIS_CONF) if (auto fn = config->m_triggerActivated) fn(this, p0);
     }
-    void triggerObject(GJBaseGameLayer * p0, int p1, gd::vector<int> const* p2) {
+    void triggerObject(GJBaseGameLayer * p0, int p1, std::vector<int> const* p2) {
         if (ALREADY_HAVE_GOF_IMPL) return EffectGameObject::triggerObject(p0, p1, p2);
 
         EffectGameObject::triggerObject(p0, p1, p2);
@@ -183,11 +184,12 @@ class $modify(GameObjectFactoryExt, GameObject) {
         if (auto config = GameObjectsFactory::getGameObjectConfig(p0)) {
             // Create base object
             auto object = GameObject::createWithKey(config->m_refObjectID);
+            if (!object) return nullptr;
             object->setUserObject("config"_spr, config);
 
             object->customSetup();
 
-            std::string frame = ObjectToolbox::sharedState()->intKeyToFrame(
+            gd::string frame = ObjectToolbox::sharedState()->intKeyToFrame(
                 config->m_refObjectID
             );
             object->addColorSprite(frame);
@@ -204,7 +206,7 @@ class $modify(GameObjectFactoryExt, GameObject) {
         return GameObject::createWithKey(p0);
     }
 
-    static GameObject* objectFromVector(gd::vector<gd::string>&p0, gd::vector<void*>&p1, GJBaseGameLayer * p2, bool p3) {
+    static GameObject* objectFromVector(std::vector<gd::string>& p0, std::vector<void*>& p1, GJBaseGameLayer* p2, bool p3) {
         if (ALREADY_HAVE_GOF_IMPL) return GameObject::objectFromVector(p0, p1, p2, p3);
 
         auto object = GameObject::objectFromVector(p0, p1, p2, p3);
@@ -227,18 +229,18 @@ class $modify(GameObjectFactoryExt, GameObject) {
         return object;
     }
 
-    virtual gd::string getSaveString(GJBaseGameLayer * p0) {
+    gd::string getSaveString(GJBaseGameLayer* p0) {
         if (ALREADY_HAVE_GOF_IMPL) return GameObject::getSaveString(p0);
 
-        auto str = GameObject::getSaveString(p0);
+        auto str = std::string(GameObject::getSaveString(p0));
 
         if (auto config = GameObjectsFactory::getGameObjectConfig(this->m_objectID)) {
             if (config->m_saveString) {
-                return config->m_saveString(str.c_str(), this, p0).c_str();
+                return config->m_saveString(str, this, p0);
             }
         }
 
-        return str.c_str();
+        return str;
     }
 };
 
@@ -300,9 +302,12 @@ class $modify(EditorUIFactoryExt, EditorUI) {
         // Add all registered custom objects to appropriate tabs
         auto registry = GameObjectsFactory::getRegistry();
         if (registry && registry->getChildrenCount()) {
-            CCArrayExt<GameObjectsFactory::GameObjectConfig> iter = registry->getChildren();
+            CCArrayExt<GameObjectsFactory::GameObjectConfig*> iter = registry->getChildren();
             for (auto config : iter) if (config) {
-                if (auto tab = CCArrayExt<EditButtonBar*>(m_createButtonBars)[config->m_createTabBar]) {
+                auto bars = CCArrayExt<EditButtonBar*>(m_createButtonBars);
+                int idx = config->m_createTabBar;
+                if (idx < 0 || idx >= (int)bars.size()) continue;
+                if (auto tab = bars[idx]) {
                     auto newb = this->getCreateBtn(config->m_objectID, config->m_createBtnBg);
                     if (config->m_tabBarInsertIndex == -1) tab->m_buttonArray->addObject(newb);
                     else tab->m_buttonArray->insertObject(newb, config->m_tabBarInsertIndex);
@@ -347,7 +352,7 @@ inline void registerCustomObjects() {
         UNIQ_ID("test-trigger"),
         "framename.png"_spr,
 
-        [](EffectGameObject* trigger, GJBaseGameLayer* game, int p1, gd::vector<int> const* p2)
+        [](EffectGameObject* trigger, GJBaseGameLayer* game, int p1, std::vector<int> const* p2)
         {
             log::info("trigger callback!");
         },
@@ -366,7 +371,7 @@ inline void registerCustomObjects() {
             UNIQ_ID("test-trigger2"),
             "frame_name.png"_spr
         )->triggerObject(
-            [](EffectGameObject* trigger, GJBaseGameLayer* game, int p1, gd::vector<int> const* p2) {
+            [](EffectGameObject* trigger, GJBaseGameLayer* game, int p1, std::vector<int> const* p2) {
                 log::info("trigger2 callback!");
             }
         )->customSetup(
@@ -377,7 +382,7 @@ inline void registerCustomObjects() {
                 return str;
             }
         )->objectFromVector(
-            [](GameObject* object, gd::vector<gd::string>& p0, gd::vector<void*>&, void*, bool) {
+            [](GameObject* object, std::vector<std::string>& p0, std::vector<void*>&, void*, bool) {
                 // do something with object by p0
                 return object;
             }
@@ -439,15 +444,15 @@ inline void registerCustomObjects() {
     { log::info("activated by player, {}, {}", object, plr); }                                                                   \
 )->triggerActivated([](GameObject* object, float dtmayb)                                                                         \
     { log::info("trigger activated, {}, {}", object, dtmayb); }                                                                  \
-)->triggerObject([](GameObject* object, GJBaseGameLayer* game, int p1, gd::vector<int> const* p2)                                \
+)->triggerObject([](GameObject* object, GJBaseGameLayer* game, int p1, std::vector<int> const* p2)                               \
     { log::info("trigger object, {}, {}", object, game); }                                                                       \
 )->editPopupSetup([](EditTriggersPopup* popup, EffectGameObject* trigger, CCArray* objects)                                      \
     { log::info("edit popup setup, {}, {}", popup, trigger); }                                                                   \
 )->saveString([](std::string str, GameObject* object, GJBaseGameLayer* level)                                                    \
     { log::info("save string, {}", str); return str; }                                                                           \
-)->objectFromVector([](GameObject* object, gd::vector<gd::string>& p0, gd::vector<void*>& p1, GJBaseGameLayer* p2, bool p3)      \
+)->objectFromVector([](GameObject* object, std::vector<std::string>& p0, std::vector<void*>& p1, GJBaseGameLayer* p2, bool p3)   \
     { log::info("object from vector"); return Ref(object); }                                                                     \
-)->spawnObject([](GJBaseGameLayer*, GameObject* object, double a, gd::vector<int> const& p1)                                     \
+)->spawnObject([](GJBaseGameLayer*, GameObject* object, double a, std::vector<int> const& p1)                                    \
     { log::info("spawn object, {}, {}, {}", object, a, p1); }                                                                    \
 )                                                                                                                                \
 
