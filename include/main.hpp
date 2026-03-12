@@ -147,7 +147,7 @@ namespace GameObjectsFactory {
         std::function<void(GameObject*)> m_resetObject = nullptr;
         std::function<void(EnhancedGameObject*, PlayerObject*)> m_activatedByPlayer = nullptr;
         std::function<void(EffectGameObject*, float)> m_triggerActivated = nullptr;
-        std::function<void(EffectGameObject*, GJBaseGameLayer*, int, std::vector<int> const*)> m_triggerObject = nullptr;
+        std::function<void(EffectGameObject*, GJBaseGameLayer*, int, gd::vector<int> const*)> m_triggerObject = nullptr;
         std::function<void(EditTriggersPopup*, EffectGameObject*, cocos2d::CCArray*)> m_editPopupSetup = nullptr;
         std::function<gd::string(gd::string, GameObject*, GJBaseGameLayer*)> m_saveString = nullptr;
         std::function<GameObject*(GameObject*, gd::vector<gd::string>&, gd::vector<void*>&, GJBaseGameLayer*, bool)> m_objectFromVector = nullptr;
@@ -189,7 +189,7 @@ namespace GameObjectsFactory {
             { m_saveString = std::move(f); return this; }
         GameObjectConfig* objectFromVector(std::function<GameObject*(GameObject*, gd::vector<gd::string>&, gd::vector<void*>&, GJBaseGameLayer*, bool)> f)
             { m_objectFromVector = std::move(f); return this; }
-        GameObjectConfig* spawnObject(std::function<void(GJBaseGameLayer*, GameObject*, double, std::vector<int> const&)> f)
+        GameObjectConfig* spawnObject(std::function<void(GJBaseGameLayer*, GameObject*, double, gd::vector<int> const&)> f)
             { m_spawnObject = std::move(f); return this; }
         GameObjectConfig* onEditObject(std::function<bool(EditorUI*, GameObject*)> f)
             { m_onEditObject = std::move(f); return this; }
@@ -389,7 +389,7 @@ namespace GameObjectsFactory {
     inline GameObjectConfig* createTriggerConfig(
         int objectID,
         const std::string& spriteFrame = "edit_eEventLinkBtn_001.png",
-        std::function<void(EffectGameObject*, GJBaseGameLayer*, int, std::vector<int> const*)> triggerCallback = nullptr,
+        std::function<void(EffectGameObject*, GJBaseGameLayer*, int, gd::vector<int> const*)> triggerCallback = nullptr,
         std::function<void(EditTriggersPopup*, EffectGameObject*, cocos2d::CCArray*)> editCallback = nullptr
     ) {
         auto config = createObjectConfig(objectID, spriteFrame);
