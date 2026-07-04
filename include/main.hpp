@@ -415,7 +415,8 @@ namespace GameObjectsFactory {
      */
     inline GameObjectConfig* createRingConfig(
         int objectID,
-        const std::string& spriteFrame = "",
+        const std::string& spriteFrame,
+        const std::string& spriteFrameDetail,
         std::function<void(EnhancedGameObject*, PlayerObject*)> activatedByPlayer = nullptr,
         std::function<void(GameObject*)> setupCallback = nullptr,
         const std::string& spriteFrameDetail = "emptyGlow.png",
